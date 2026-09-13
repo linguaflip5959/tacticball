@@ -243,6 +243,7 @@ export class MatchScene extends Phaser.Scene{
   cost.forEach((c,k)=>{ // восстанавливаем путь
     const path=[]; let cur=k;
     while(cur){ const p=cur.split(','); path.unshift({gx:+p[0],gy:+p[1]}); const pr=prev.get(cur); cur=pr?key(pr.gx,pr.gy):null; }
+    path.shift();                                  // P1-6: сносим стартовую клетку — не было «шага на месте»
     out.set(k,{cost:c,path});
   });
   return out;
@@ -449,7 +450,7 @@ export class MatchScene extends Phaser.Scene{
  }
  fumblePass(u,t){
   const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]];
-  let gx=clamp(t.gx+pick(dirs)[0],0,COLS-1), gy=clamp(t.gy+pick(dirs)[1],0,ROWS-1);
+  const d=pick(dirs), gx=clamp(t.gx+d[0],0,COLS-1), gy=clamp(t.gy+d[1],0,ROWS-1);   // P1-7: одно направление на обе оси
   this.animateBall(u.gx,u.gy,gx,gy,false,()=>{
     const who=this.anyAt(gx,gy);
     this.dropBall(gx,gy);
@@ -493,8 +494,8 @@ export class MatchScene extends Phaser.Scene{
     }
    }});
  }
- injure(u){ u.injured=true; u.acted=true; u.hasBall=false;
-  if(u.hasBall)this.dropBall(u.gx,u.gy);
+  injure(u){ if(u.hasBall)this.dropBall(u.gx,u.gy);   // P1-8: сначала мяч на землю, потом флаги — проверка всегда была false
+  u.injured=true; u.acted=true; u.hasBall=false;
   u.spr.setAlpha(.42); u.mark.setText('🩹'); this.drawRing(u); SFX.fail(); }
  markActed(u){ if(u.injured){u.mark.setText('🩹');return;} u.mark.setText(u.acted?'💤':'');
   u.spr.setAlpha(u.acted?.62:1); this.drawRing(u); }
@@ -743,7 +744,7 @@ this.confetti.emitParticleAt(L.W/2,L.oy+(team==='me'?0:L.gh),46);
    if(Math.abs(e.gx-gx)<=1&&Math.abs(e.gy-gy)<=1)n++; } return n; }
  fumbleAI(u,t){
   const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1]];
-  const gx=clamp(t.gx+pick(dirs)[0],0,COLS-1), gy=clamp(t.gy+pick(dirs)[1],0,ROWS-1);
+  const d=pick(dirs), gx=clamp(t.gx+d[0],0,COLS-1), gy=clamp(t.gy+d[1],0,ROWS-1);   // P1-7
   this.animateBall(u.gx,u.gy,gx,gy,false,()=>{
     const who=this.anyAt(gx,gy); this.dropBall(gx,gy);
     UI.toast(who?('⚡ '+who.name+' перехватил!'):'💨 Мяч скачет по полю!','gold');
