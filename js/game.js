@@ -55,11 +55,11 @@ export const Game={
   $('m-coins').textContent=UI.fmt(Save.d.coins);
   $('q-coins').textContent=UI.fmt(Save.d.coins);
  },
- syncHud(){
-  const sc=this.sc; if(!sc)return;
+  syncHud(){
+  const sc=this.sc; if(!sc||!sc.units)return;    // VK-FIX: сцена могла ещё не создать юнитов
   $('s-me').textContent=sc.scoreMe||0; $('s-ai').textContent=sc.scoreAi||0;
   const ht=sc.halfTurn||0;
-  const half=sc.half||1, turnNo=((ht-1)%TPH)+1;   // P1-5: номер хода внутри тайма, во 2-м тайме снова с 1
+  const half=sc.half||1, turnNo=((ht-1)%TPH)+1;
   $('h-turn').textContent='ТАЙМ '+half+' · ХОД '+clamp(turnNo,1,TPH)+'/'+TPH;
   $('h-turn').classList.toggle('ai',sc.turnTeam==='ai');
   $('h-acts').textContent='⚡ действий: '+(sc.actionsLeft?sc.actionsLeft():0);
