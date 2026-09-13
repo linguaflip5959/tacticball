@@ -19,4 +19,4 @@ export const Save={KEY:'tacticball_v1',
       a.bestStreak=Math.max(a.bestStreak,c.bestStreak||0); a.forms=Array.from(new Set([].concat(c.forms||[],a.forms||[]))); }
     this.write(); }); }
 };
-export const upCost=lvl=>Math.round(70*Math.pow(lvl,1.55));
+export const upCost=lvl=>Math.round(60*Math.pow(lvl,1.4));   // БАЛАНС: было 70·lvl^1.55

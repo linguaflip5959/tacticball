@@ -365,12 +365,12 @@ highlightTargets(){
   const d=Math.hypot(u.gx-(COLS-1)/2,u.gy-goalRow);
   return d<=5.2;
  }
- shootTarget(u){
+  shootTarget(u){
   const goalRow=u.team==='me'?-0.5:ROWS-0.5;
   const d=Math.hypot(u.gx-(COLS-1)/2,u.gy-goalRow);
   const angle=Math.abs(u.gx-(COLS-1)/2)*.55;
   const press=this.pressure(u);
-  let t=5+d*.85-u.st.sht*.75+angle*.5+press*.7;
+  let t=5+d*.85-u.st.sht*.75+angle+press*.9;    // БАЛАНС: угол 0.275→0.55, давление 0.7→0.9
   const D=DIFFS[Save.d.diff];
   if(u.team==='me') t+=D.gk; else t-=D.gk;
   if(this.rubber) t-= this.rubber*(u.team==='me'?1:-1);
