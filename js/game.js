@@ -30,9 +30,9 @@ export const Game={
   this.sc=this.ph.scene.getScene('match');
   this.wire(); this.afterBoot(); this.syncHud();
  },
-  afterBoot(){
+   afterBoot(){
   this.menuStats(); this.squad();
-  VKB.init(); VKB.user().then(u=>{ if(u)$('m-user').textContent='Тренер '+u.first_name+', «Барсуки» ждут свистка!'; });
+  VKB.user().then(u=>{ if(u)$('m-user').textContent='Тренер '+u.first_name+', «Барсуки» ждут свистка!'; });
   Save.cloud().then(()=>{ this.menuStats(); this.squad(); });
   SFX.on=Save.d.sound; $('btn-sound').textContent=Save.d.sound?'🔊':'🔇';
   document.querySelectorAll('.diff').forEach(d=>d.classList.toggle('on',+d.dataset.d===Save.d.diff));
