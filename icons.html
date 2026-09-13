@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ТАКТИК-БОЛ · генератор графики для ВК</title>
+<link href="https://cdn.jsdelivr.net/fontsource/css/russo-one@latest/index.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/fontsource/css/rubik@latest/index.css" rel="stylesheet">
+<style>
+ body{background:#04100c;color:#fff;font-family:'Rubik',sans-serif;margin:0;padding:24px;
+   display:flex;flex-direction:column;align-items:center;gap:26px}
+ h1{font-family:'Russo One',sans-serif;font-size:22px;margin:0;color:#c6ff4f}
+ .box{display:flex;flex-direction:column;align-items:center;gap:12px}
+ canvas{border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.55);max-width:100%}
+ #icon{width:340px;height:340px}
+ #ban{width:min(880px,96vw)}
+ button{border:0;border-radius:14px;padding:13px 22px;cursor:pointer;
+   font-family:'Russo One',sans-serif;font-size:14px;color:#062a13;
+   background:linear-gradient(180deg,#8dffa8,#2fe07a 45%,#0f9c4f);box-shadow:0 5px 0 #075c2c}
+ button:active{transform:translateY(4px);box-shadow:0 1px 0 #075c2c}
+ .note{font-size:12px;color:rgba(255,255,255,.55);text-align:center;max-width:640px;line-height:1.5}
+</style>
+</head>
+<body>
+<h1>⚽ ТАКТИК-БОЛ · генератор графики</h1>
+<div class="box">
+  <canvas id="icon" width="1024" height="1024"></canvas>
+  <button id="b1">⬇ Иконка 1024×1024 (PNG)</button>
+</div>
+<div class="box">
+  <canvas id="ban" width="1120" height="630"></canvas>
+  <button id="b2">⬇ Большой сниппет 1120×630 (PNG)</button>
+</div>
+<p class="note">Если текст на картинках выглядит «не тем» шрифтом — обнови страницу: Russo One подтягивается с CDN.
+Скачанные PNG — готовые файлы для анкеты приложения ВК. Как и вся графика игры — сгенерировано кодом 😄</p>
+<script>
+function rr(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+function RNG(seed){ let s=seed>>>0;
+  return function(){ s=(s*1103515245+12345)&0x7fffffff; return s/0x7fffffff; }; }
+
+function drawBall(ctx,cx,cy,r){
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,.45)'; ctx.shadowBlur=r*.28; ctx.shadowOffsetY=r*.14;
+  ctx.fillStyle='#fdfdfd';
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle='rgba(30,30,30,.85)'; ctx.lineWidth=Math.max(2,r*.045);
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle='#1b1b1b';
+  const poly=(px,py,pr,n,rot)=>{ ctx.beginPath();
+    for(let i=0;i<n;i++){ const a=rot+i*Math.PI*2/n;
+      const x=px+Math.cos(a)*pr, y=py+Math.sin(a)*pr;
+      if(i)ctx.lineTo(x,y); else ctx.moveTo(x,y); }
+    ctx.closePath(); ctx.fill(); };
+  poly(cx,cy,r*.36,5,-Math.PI/2);
+  for(let i=0;i<5;i++){ const a=-Math.PI/2+i*Math.PI*2/5;
+    poly(cx+Math.cos(a)*r*.78, cy+Math.sin(a)*r*.78, r*.22, 5, a); }
+}
+
+function drawDie(ctx,x,y,s,rot,face){
+  ctx.save();
+  ctx.translate(x,y); ctx.rotate(rot);
+  ctx.shadowColor='rgba(0,0,0,.5)'; ctx.shadowBlur=s*.22; ctx.shadowOffsetY=s*.1;
+  const g=ctx.createLinearGradient(0,-s/2,0,s/2);
+  g.addColorStop(0,'#ffffff'); g.addColorStop(1,'#dfe7e2');
+  ctx.fillStyle=g;
+  rr(ctx,-s/2,-s/2,s,s,s*.18); ctx.fill();
+  ctx.shadowColor='transparent';
+  ctx.strokeStyle='rgba(110,125,118,.95)'; ctx.lineWidth=Math.max(2,s*.028);
+  rr(ctx,-s/2,-s/2,s,s,s*.18); ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,.5)';
+  rr(ctx,-s*.42,-s*.44,s*.84,s*.16,s*.08); ctx.fill();
+  const P={1:[[0,0]],2:[[-1,-1],[1,1]],3:[[-1,-1],[0,0],[1,1]],
+    4:[[-1,-1],[1,-1],[-1,1],[1,1]],5:[[-1,-1],[1,-1],[0,0],[-1,1],[1,1]],
+    6:[[-1,-1],[1,-1],[-1,0],[1,0],[-1,1],[1,1]]}[face];
+  const u=s*.26;
+  ctx.fillStyle='#141a17';
+  P.forEach(p=>{ ctx.beginPath(); ctx.arc(p[0]*u,p[1]*u,s*.085,0,Math.PI*2); ctx.fill(); });
+  ctx.restore();
+}
+
+function drawToken(ctx,x,y,r,color,num){
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,.5)'; ctx.shadowBlur=r*.5; ctx.shadowOffsetY=r*.3;
+  ctx.fillStyle=color; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle='rgba(255,255,255,.92)'; ctx.lineWidth=r*.11;
+  ctx.beginPath(); ctx.arc(x,y,r*.82,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle='#fff';
+  ctx.font=Math.round(r*1.02)+"px 'Russo One', sans-serif";
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(String(num),x,y+r*.06);
+}
+
+function glowSpot(ctx,x,y,r,rgb,a){
+  const g=ctx.createRadialGradient(x,y,r*.1,x,y,r);
+  g.addColorStop(0,'rgba('+rgb+','+a+')');
+  g.addColorStop(1,'rgba('+rgb+',0)');
+  ctx.fillStyle=g; ctx.fillRect(x-r,y-r,r*2,r*2);
+}
+
+function drawIcon(){
+  const cv=document.getElementById('icon'), ctx=cv.getContext('2d');
+  const W=1024,H=1024;
+  const g=ctx.createRadialGradient(W*.5,H*.4,90,W*.5,H*.55,W*.78);
+  g.addColorStop(0,'#1c6340'); g.addColorStop(.5,'#0f3d26'); g.addColorStop(1,'#03110b');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  for(let i=0;i<8;i++){ ctx.fillStyle=i%2?'rgba(255,255,255,.028)':'rgba(0,0,0,.06)';
+    ctx.fillRect(0,i*H/8,W,H/8+1); }
+  ctx.strokeStyle='rgba(255,255,255,.12)'; ctx.lineWidth=10;
+  ctx.beginPath(); ctx.arc(W/2,H/2,436,0,Math.PI*2); ctx.stroke();
+  drawBall(ctx,W*.40,H*.40,252);
+  drawDie(ctx,W*.67,H*.71,336,-0.22,6);
+}
+
+function drawBanner(){
+  const cv=document.getElementById('ban'), ctx=cv.getContext('2d');
+  const W=1120,H=630, py=H*.60, ph=H-py;
+  // ночное небо
+  const sky=ctx.createLinearGradient(0,0,0,py);
+  sky.addColorStop(0,'#0b1a2b'); sky.addColorStop(1,'#061420');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,py);
+  // трибуны
+  const R=RNG(777), pal=['#ff5d5d','#ffd23f','#5dd0ff','#ffffff','#7bffa8','#ff9bd0','#c3a2ff'];
+  for(let i=0;i<1600;i++){
+    ctx.fillStyle=pal[Math.floor(R()*7)];
+    ctx.globalAlpha=.25+R()*.5;
+    ctx.beginPath(); ctx.arc(R()*W,R()*py*.95,1.1+R()*1.9,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  // затемнение под логотип
+  const halo=ctx.createRadialGradient(W/2,H*.32,40,W/2,H*.32,470);
+  halo.addColorStop(0,'rgba(3,10,8,.6)'); halo.addColorStop(1,'rgba(3,10,8,0)');
+  ctx.fillStyle=halo; ctx.fillRect(0,0,W,py);
+  // газон
+  for(let i=0;i<7;i++){ ctx.fillStyle=i%2?'#2ea24c':'#27913f';
+    ctx.fillRect(0,py+i*ph/7,W,ph/7+1); }
+  const side=ctx.createLinearGradient(0,0,W,0);
+  side.addColorStop(0,'rgba(0,0,0,.30)'); side.addColorStop(.14,'rgba(0,0,0,0)');
+  side.addColorStop(.86,'rgba(0,0,0,0)'); side.addColorStop(1,'rgba(0,0,0,.30)');
+  ctx.fillStyle=side; ctx.fillRect(0,py,W,ph);
+  // разметка
+  ctx.strokeStyle='rgba(255,255,255,.72)'; ctx.lineWidth=4;
+  ctx.strokeRect(16,py+12,W-32,ph-24);
+  ctx.beginPath(); ctx.moveTo(W/2,py+12); ctx.lineTo(W/2,py+ph-12); ctx.stroke();
+  ctx.beginPath(); ctx.arc(W/2,py+ph*.52,92,0,Math.PI*2); ctx.stroke();
+  ctx.strokeRect(16,py+ph*.22,120,ph*.56);
+  ctx.strokeRect(W-136,py+ph*.22,120,ph*.56);
+  // сетки ворот
+  ctx.strokeStyle='rgba(255,255,255,.30)'; ctx.lineWidth=2;
+  for(let i=1;i<6;i++){
+    ctx.beginPath(); ctx.moveTo(16+i*20,py+ph*.22); ctx.lineTo(16+i*20,py+ph*.78); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W-136+i*20,py+ph*.22); ctx.lineTo(W-136+i*20,py+ph*.78); ctx.stroke(); }
+  for(let i=1;i<8;i++){ const y=py+ph*.22+i*(ph*.56/8);
+    ctx.beginPath(); ctx.moveTo(16,y); ctx.lineTo(136,y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W-136,y); ctx.lineTo(W-16,y); ctx.stroke(); }
+  // команды
+  drawToken(ctx,W*.14,py+ph*.50,40,'#39c2ff',7);
+  drawToken(ctx,W*.24,py+ph*.72,40,'#39c2ff',9);
+  drawToken(ctx,W*.33,py+ph*.34,40,'#39c2ff',4);
+  drawToken(ctx,W*.86,py+ph*.50,40,'#ff4d6d',1);
+  drawToken(ctx,W*.76,py+ph*.72,40,'#ff4d6d',3);
+  drawToken(ctx,W*.67,py+ph*.34,40,'#ff4d6d',5);
+  // мяч в центральном круге
+  drawBall(ctx,W*.5,py+ph*.52,32);
+  // «крит» — пара шестёрок с лаймовым свечением
+  glowSpot(ctx,W*.41,py+ph*.30,115,'198,255,79',.55);
+  glowSpot(ctx,W*.59,py+ph*.24,115,'198,255,79',.55);
+  drawDie(ctx,W*.41,py+ph*.30,74,.32,6);
+  drawDie(ctx,W*.59,py+ph*.24,74,-.18,6);
+  // логотип
+  ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,.7)'; ctx.shadowBlur=18; ctx.shadowOffsetY=6;
+  ctx.fillStyle='#ffffff';
+  ctx.font="86px 'Russo One', sans-serif";
+  ctx.fillText('ТАКТИК',W/2,H*.20);
+  ctx.restore();
+  ctx.save();
+  ctx.font="150px 'Russo One', sans-serif";
+  const tg=ctx.createLinearGradient(0,H*.22,0,H*.42);
+  tg.addColorStop(0,'#eafff0'); tg.addColorStop(.45,'#7dffab'); tg.addColorStop(1,'#12b45f');
+  ctx.shadowColor='rgba(0,0,0,.75)'; ctx.shadowBlur=22; ctx.shadowOffsetY=9;
+  ctx.fillStyle=tg;
+  ctx.fillText('БОЛ',W/2,H*.40);
+  ctx.restore();
+  // слоган (поменяешь — одна строка)
+  ctx.save();
+  ctx.fillStyle='#c6ff4f';
+  ctx.shadowColor='rgba(0,0,0,.6)'; ctx.shadowBlur=8;
+  ctx.font="600 33px 'Rubik', sans-serif";
+  ctx.fillText('Футбол на кубиках. Твой ход!',W/2,H*.49);
+  ctx.restore();
+}
+
+function dl(cv,name){ const a=document.createElement('a');
+  a.download=name; a.href=cv.toDataURL('image/png'); a.click(); }
+document.getElementById('b1').onclick=()=>dl(document.getElementById('icon'),'tacticball-icon-1024.png');
+document.getElementById('b2').onclick=()=>dl(document.getElementById('ban'),'tacticball-snippet-1120x630.png');
+
+function drawAll(){ drawIcon(); drawBanner(); }
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>setTimeout(drawAll,80));
+else drawAll();
+</script>
+</body>
+</html>
