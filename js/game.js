@@ -46,7 +46,7 @@ export const Game={
   $('h-coins').textContent=UI.fmt(Save.d.coins);
   $('btn-pause-doc').style.display=(sc.docUsed||sc.phase==='over')?'none':'flex';
  },
- syncCard(u,afterMove){
+  syncCard(u){
   const p=$('pcard');
   if(!u){ p.classList.remove('on'); ['a-pass','a-shoot','a-tackle','a-wait'].forEach(id=>$(id).disabled=true); return; }
   p.classList.add('on');
@@ -64,7 +64,6 @@ export const Game={
   else $('a-shoot-t').textContent='далеко';
   if(canT){ const c=this.sc.units.find(t=>t.team==='ai'&&t.hasBall&&!t.injured); const tt=this.sc.tackTarget(u,c);
     $('a-tack-t').textContent=tt.t+'+'; } else $('a-tack-t').textContent='нет цели';
-  $('a-end').classList.toggle('go',true);
  },
  squad(){
   const L=$('sq-list'); L.innerHTML='';

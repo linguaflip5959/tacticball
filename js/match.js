@@ -1,7 +1,7 @@
 /* =====================================================================
    match.js — MatchScene: ядро матча (поле, ходы, кубики, ИИ)
    ===================================================================== */
-import {COLS,ROWS,TPH,DIFFS,FORMS,NAMES,POSN,clamp,lerp,rint,rnd,pick,hex,dist,key,$} from './utils.js';
+import {COLS,ROWS,TPH,DIFFS,FORMS,NAMES,POSN,BASE_SQUAD,clamp,lerp,rint,rnd,pick,hex,dist,key,$} from './utils.js';
 import {SFX} from './sfx.js';
 import {VKB} from './bridge.js';
 import {Save} from './save.js';
@@ -54,10 +54,10 @@ export class MatchScene extends Phaser.Scene{
   return (gx<0||gy<0||gx>=COLS||gy>=ROWS)?null:{gx,gy}; }
 
  drawStadium(){
-  const g=this.ground,L=this.W?null:null,W=this.L.W,H=this.L.H; g.clear();
+  const g=this.ground,W=this.L.W,H=this.L.H; g.clear();
   // фон-трибуны
   g.fillStyle(0x0b1a2b,1); g.fillRect(0,0,W,H);
-  const gr=g; let seed=1234; const R=()=>{seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff;};
+  let seed=1234; const R=()=>{seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff;};
   for(let i=0;i<2600;i++){
     const x=R()*W,y=R()*H;
     if(x>this.L.ox-14&&x<this.L.ox+this.L.gw+14&&y>this.L.oy-14&&y<this.L.oy+this.L.gh+14)continue;
@@ -116,7 +116,7 @@ export class MatchScene extends Phaser.Scene{
    for(let i=0;i<5;i++){
     const st=t===1?Save.d.squad[i]:this.aiStats(i);
     const u={team:t?'ai':'me',idx:i,num:i+1,name:t?['ЗУБ','БРОНЯ','ТАРА́Н','КОПЫТО','ГРОМ'][i]:NAMES[i],
-      pos:t?POSN[i]:POSN[i],
+      pos:POSN[i],                                              // P4: было t?POSN[i]:POSN[i]
       st:{spd:st.spd,pas:st.pas,sht:st.sht,tkl:st.tkl},
       acted:false,injured:false,hasBall:false,gx:0,gy:0,spr:null};
     this.units.push(u);
@@ -126,11 +126,8 @@ export class MatchScene extends Phaser.Scene{
   this.placeFormation(form);
  }
  aiStats(i){
-  const d=DIFFS[Save.d.diff];
-  const base=[{spd:3,pas:3,sht:2,tkl:4},{spd:4,pas:3,sht:3,tkl:3},{spd:3,pas:4,sht:3,tkl:3},
-              {spd:4,pas:3,sht:4,tkl:2},{spd:5,pas:2,sht:5,tkl:2}][i];
   const boost=Save.d.diff===2?1:(Save.d.diff===0?-1:0);
-  const o={}; for(const k in base) o[k]=clamp(base[k]+boost,1,7);
+  const o={}; for(const k in BASE_SQUAD[i]) o[k]=clamp(BASE_SQUAD[i][k]+boost,1,7);
   return o;
  }
  buildSprite(u){
@@ -169,25 +166,22 @@ export class MatchScene extends Phaser.Scene{
   if(u.injured){ g.lineStyle(2.5,0xff4d6d,.9); g.strokeCircle(0,0,r-2); }
  }
  placeFormation(form){
-  const L=this.L;
   this.units.forEach(u=>{
     const p=form.pos[u.idx];
     u.gx=p[0];
     u.gy = u.team==='me' ? (ROWS-1-p[1]) : p[1];
-    u.acted=false; u.hasBall=false; u.mSpent=0;          // P2: бюджет обнуляем, травму НЕ лечим — до конца матча
+    u.acted=false; u.hasBall=false; u.mSpent=0;              // P2: бюджет обнуляем, травму НЕ лечим
     u.spr.setAlpha(u.injured?.42:1); u.mark.setText(u.injured?'🩹':'');
-    const xy={x:this.cx(u.gx),y:this.cy(u.gy)};
-    u.spr.setPosition(xy.x,xy.y); this.drawRing(u);
+    u.spr.setPosition(this.cx(u.gx),this.cy(u.gy)); this.drawRing(u);   // P4: без объекта-посредника
   });
  }
- syncSprites(instant){
+  syncSprites(instant){
   this.units.forEach(u=>{ if(!u.spr)return; const x=this.cx(u.gx),y=this.cy(u.gy);
     if(instant)u.spr.setPosition(x,y); });
   const b=this.ball;
-  if(b){ if(b.onGround!==false){ } this.placeBall(b.gx,b.gy,instant); }
+  if(b){ this.placeBall(b.gx,b.gy,instant); }                // P4: пустой if-артефакт срезан
  }
- unitAt(gx,gy){ return this.units.find(u=>!u.injured&&u.gx===gx&&u.gy===gy); }
- anyAt(gx,gy){ return this.units.find(u=>u.gx===gx&&u.gy===gy&&!u.injured); }
+ anyAt(gx,gy){ return this.units.find(u=>u.gx===gx&&u.gy===gy&&!u.injured); }   // P4: unitAt-близнец уволен
 
  /* ---------- мяч ---------- */
  placeBall(gx,gy,instant){
@@ -271,8 +265,8 @@ export class MatchScene extends Phaser.Scene{
 
  /* ---------- кубики ---------- */
  roll(cfg){
-  // cfg={label,target,mod,who,rerollable,cb}
-  const L=this.W?null:null,W=this.scale.width,H=this.scale.height;
+  // cfg={label,target,mod,rerollable,cb}
+  const W=this.scale.width,H=this.scale.height;
   this.phase='anim';
   this.fxL.removeAll(true);
   const dim=this.add.graphics(); dim.fillStyle(0x000000,.42); dim.fillRect(0,0,W,H); this.fxL.add(dim);
@@ -291,10 +285,9 @@ export class MatchScene extends Phaser.Scene{
   this.fxL.add(res);
   this.tweens.add({targets:[lab,need],alpha:1,duration:180});
   this.tweens.add({targets:[d1,d2],alpha:1,scale:{from:.3,to:s/92},duration:200,ease:'Back.easeOut'});
-  let spins=0;
   const iv=this.time.addEvent({delay:75,repeat:8,callback:()=>{
     d1.setTexture('dice'+rint(1,6)); d2.setTexture('dice'+rint(1,6));
-    d1.setAngle(rnd(-22,22)); d2.setAngle(rnd(-22,22)); SFX.dice(); spins++; }});
+    d1.setAngle(rnd(-22,22)); d2.setAngle(rnd(-22,22)); SFX.dice(); }});
   this.time.delayedCall(780,()=>{
     const v1=rint(1,6),v2=rint(1,6);
     d1.setTexture('dice'+v1); d2.setTexture('dice'+v2); d1.setAngle(0); d2.setAngle(0);
@@ -312,13 +305,13 @@ export class MatchScene extends Phaser.Scene{
     SFX.tone(ok?700:260,.2,'square',.12,ok?1100:140);
     this.time.delayedCall(1050,()=>{
       this.fxL.removeAll(true);
-      if(!ok&&cfg.rerollable&&this.canReroll()) { this.offerReroll(cfg,v1,v2,ok,{v1,v2,sum,total,dbl,ok}); }
+      if(!ok&&cfg.rerollable&&this.canReroll()) { this.offerReroll(cfg,{v1,v2,sum,total,dbl,ok}); }
       else cfg.cb(ok,{v1,v2,sum,total,dbl,crit:dbl&&v1===6,fumble:dbl&&v1===1});
     });
   });
  }
  canReroll(){ return this.rerollFree>0||this.rerollAd<2; }
- offerReroll(cfg,v1,v2,ok,info){
+ offerReroll(cfg,info){                                       // P4: v1,v2,ok — уволены
   this.phase='reroll';
   const p=$('rr'); $('rr-n').textContent=this.rerollFree;
   $('rr-free').style.display=this.rerollFree>0?'flex':'none';
@@ -341,31 +334,31 @@ export class MatchScene extends Phaser.Scene{
   if(UI.any()||$('rr').classList.contains('on'))return;
   const c=this.cellAt(ptr.x,ptr.y); if(!c)return;
   if(this.phase==='target'){ this.handleTarget(c.gx,c.gy); return; }
-  const u=this.unitAt(c.gx,c.gy);
+  const u=this.anyAt(c.gx,c.gy);
   if(u&&u.team==='me'&&!u.acted){ this.select(u); return; }
   if(this.sel&&this.moveCells&&this.moveCells.has(key(c.gx,c.gy))){
     const m=this.moveCells.get(key(c.gx,c.gy));
-    const u2=this.sel; this.clearHi(); this.keepSel=true;
-    u2.mSpent=(u2.mSpent||0)+m.cost;                    // P2-10: списываем бюджет
-    this.walk(u2,m.path,()=>{ this.phase='idle'; this.select(u2,true); SFX.ui(); });
+    const u2=this.sel; this.clearHi();
+    u2.mSpent=(u2.mSpent||0)+m.cost;                          // P2-10: списываем бюджет
+    this.walk(u2,m.path,()=>{ this.phase='idle'; this.select(u2); SFX.ui(); });
     return;
   }
   this.deselect();
  }
- select(u,afterMove){
+ select(u){
   this.sel=u; this.phase='idle';
   this.moveCells = (u.acted||u.injured)?new Map():this.moveMap(u);
   this.targetMode=null;
   this.highlightTargets();
-  Game.syncCard(u,afterMove);
+  Game.syncCard(u);
   this.units.forEach(x=>this.drawRing(x));
   SFX.ui();
  }
  deselect(){ this.sel=null; this.moveCells=null; this.targetMode=null; this.clearHi();
   this.units.forEach(x=>this.drawRing(x)); Game.syncCard(null); }
- highlightTargets(){
+highlightTargets(){
   if(!this.sel){this.clearHi();return;}
-  if(this.moveCells&&this.moveCells.size) this.highlight(new Map(Array.from(this.moveCells,( [k,v])=>[k,v])),0x2fe07a,.22);
+  if(this.moveCells&&this.moveCells.size) this.highlight(this.moveCells,0x2fe07a,.22);
  }
  canShoot(u){
   const goalRow=u.team==='me'?-0.5:ROWS-0.5;
@@ -396,7 +389,7 @@ export class MatchScene extends Phaser.Scene{
  passRange(u){ return 2+u.st.pas*.6; }
 
  /* ---------- действия игрока ---------- */
- actPass(){
+  actPass(){
   const u=this.sel; if(!u||u.acted)return;
   this.phase='target'; this.targetMode='pass';
   const map=new Map();
@@ -404,7 +397,6 @@ export class MatchScene extends Phaser.Scene{
     map.set(key(t.gx,t.gy),1); });
   this.passMap=map;
   const g=this.cells; g.clear();
-  this.highlight(new Map(),0x39c2ff,.0);
   map.forEach((v,k)=>{ const p=k.split(','); const x=this.L.ox+this.L.cs*(+p[0]),y=this.L.oy+this.L.cs*(+p[1]);
     g.fillStyle(0x39c2ff,.24); g.fillRoundedRect(x+3,y+3,this.L.cs-6,this.L.cs-6,this.L.cs*.16);
     g.lineStyle(2.5,0x9be8ff,.95); g.strokeRoundedRect(x+3,y+3,this.L.cs-6,this.L.cs-6,this.L.cs*.16); });
@@ -520,14 +512,13 @@ export class MatchScene extends Phaser.Scene{
     onComplete:()=>{ this.ballSpr.setDisplaySize(L.cs*.46,L.cs*.46); cb&&cb(); }});
  }
 
- scoreGoal(team,by){
+  scoreGoal(team){
   const L=this.L;
   if(team==='me')this.scoreMe++; else this.scoreAi++;
   SFX.goal(); this.cameras.main.shake(280,.014); this.cameras.main.flash(200,255,240,150);
-this.confetti.emitParticleAt(L.W/2,L.oy+(team==='me'?0:L.gh),46);
+  this.confetti.emitParticleAt(L.W/2,L.oy+(team==='me'?0:L.gh),46);
   this.bigText(team==='me'?'ГОООЛ!':'ГОЛ В ТВОИ ВОРОТА',team==='me'?0x2fe07a:0xff4d6d);
   VKB.track('goal_'+team,1);
-  this.goalCount[team]++;
   Game.syncHud();
   this.phase='anim';
   this.time.delayedCall(1500,()=>{
@@ -537,9 +528,8 @@ this.confetti.emitParticleAt(L.W/2,L.oy+(team==='me'?0:L.gh),46);
  }
 
  /* ---------- ход / матч ---------- */
- startMatch(){
+  startMatch(){
   this.scoreMe=0; this.scoreAi=0; this.half=1; this.halfTurn=0; this.turnsLost=0;
-  this.goalCount={me:0,ai:0};
   this.rerollFree=2; this.rerollAd=0; this.docUsed=false; this.x2Used=false; this.shared=false;
   this.rubber=0;
   this.makeUnits(); this.redrawUnits();
@@ -672,7 +662,7 @@ this.confetti.emitParticleAt(L.W/2,L.oy+(team==='me'?0:L.gh),46);
   if(carrier){
     // пас лучшему партнёру
     const mates=this.units.filter(x=>x.team==='ai'&&!x.injured&&x!==u&&dist(u.gx,u.gy,x.gx,x.gy)<=this.passRange(u));
-    const best=mates.map(m=>({m,pt:this.passTarget(u,m),adv:(ROWS-m.gy)*-1+ (ROWS-m.gy)*0, score:0}))
+    const best=mates.map(m=>({m,pt:this.passTarget(u,m),score:0}))
       .map(o=>{ o.score=(ROWS-o.m.gy)*0.6 - o.pt.t*1.2 - this.pressure(o.m)*1.5; return o; })
       .sort((a,b)=>b.score-a.score)[0];
     if(best&&best.pt.t<=8&&(press>0||dGoal>4.5)&&Math.random()<.8){
