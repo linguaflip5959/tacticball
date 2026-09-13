@@ -174,8 +174,8 @@ export class MatchScene extends Phaser.Scene{
     const p=form.pos[u.idx];
     u.gx=p[0];
     u.gy = u.team==='me' ? (ROWS-1-p[1]) : p[1];
-    u.acted=false; u.injured=false; u.hasBall=false;
-    u.spr.setAlpha(1); u.mark.setText('');
+    u.acted=false; u.hasBall=false; u.mSpent=0;          // P2: бюджет обнуляем, травму НЕ лечим — до конца матча
+    u.spr.setAlpha(u.injured?.42:1); u.mark.setText(u.injured?'🩹':'');
     const xy={x:this.cx(u.gx),y:this.cy(u.gy)};
     u.spr.setPosition(xy.x,xy.y); this.drawRing(u);
   });
@@ -218,7 +218,7 @@ export class MatchScene extends Phaser.Scene{
 
  /* ---------- движение (дейкстра) ---------- */
  moveMap(u){
-  const L=this.L,budget=u.st.spd, start={gx:u.gx,gy:u.gy};
+  const L=this.L,budget=Math.max(0,u.st.spd-(u.mSpent||0)), start={gx:u.gx,gy:u.gy};   // P2-10: СКР = бюджет на ход
   const cost=new Map([[key(start.gx,start.gy),0]]);
   const prev=new Map(); const pq=[{gx:start.gx,gy:start.gy,c:0}];
   const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
@@ -346,6 +346,7 @@ export class MatchScene extends Phaser.Scene{
   if(this.sel&&this.moveCells&&this.moveCells.has(key(c.gx,c.gy))){
     const m=this.moveCells.get(key(c.gx,c.gy));
     const u2=this.sel; this.clearHi(); this.keepSel=true;
+    u2.mSpent=(u2.mSpent||0)+m.cost;                    // P2-10: списываем бюджет
     this.walk(u2,m.path,()=>{ this.phase='idle'; this.select(u2,true); SFX.ui(); });
     return;
   }
@@ -471,7 +472,7 @@ export class MatchScene extends Phaser.Scene{
     this.animateBall(u.gx,u.gy,tx,ty,ok,()=>{
       if(ok||info.crit) this.scoreGoal(u.team,u);
       else { SFX.fail(); UI.toast('🧤 Вратарь забирает!','red'); VKB.track('shot_saved',1);
-        this.dropBall(clamp(u.gx+rnd(-1,1)|0,0,COLS-1), u.team==='me'?1:ROWS-2);
+        this.dropBall(clamp(u.gx+rint(-1,1),0,COLS-1), u.team==='me'?1:ROWS-2);   // P2-15: было rnd(-1,1)|0 — почти всегда 0
         this.turnover('Удар отражён!'); }
     });
    }});
@@ -550,12 +551,13 @@ this.confetti.emitParticleAt(L.W/2,L.oy+(team==='me'?0:L.gh),46);
  kickoff(team){
   const form=FORMS.find(f=>f.id===Save.d.form)||FORMS[0];
   this.placeFormation(form);
-  this.units.forEach(u=>{u.acted=false;u.injured=false;u.spr.setAlpha(1);u.mark.setText('');this.drawRing(u);});
+  this.units.forEach(u=>{u.acted=false;u.spr.setAlpha(u.injured?.42:1);u.mark.setText(u.injured?'🩹':'');this.drawRing(u);});   // P2-12: травмы переживают гол
   this.sel=null; this.clearHi(); Game.syncCard(null);
   // мяч в центр, владеет начинающая команда
   const mid={gx:Math.floor(COLS/2),gy:Math.floor(ROWS/2)};
-  const u=this.units.find(x=>x.team===team&&x.gx===mid.gx&&x.gy===mid.gy)
-        || this.units.filter(x=>x.team===team).sort((a,b)=>dist(a.gx,a.gy,mid.gx,mid.gy)-dist(b.gx,b.gy,mid.gx,mid.gy))[0];
+  const u=this.units.find(x=>x.team===team&&!x.injured&&x.gx===mid.gx&&x.gy===mid.gy)
+        || this.units.filter(x=>x.team===team&&!x.injured).sort((a,b)=>dist(a.gx,a.gy,mid.gx,mid.gy)-dist(b.gx,b.gy,mid.gx,mid.gy))[0]
+        || this.units.find(x=>x.team===team);   // страховка: если вся команда в лазарете — не падаем
   const free=this.anyAt(mid.gx,mid.gy);
   if(free&&free!==u){ // меняем местами
     const tg={gx:u.gx,gy:u.gy}; u.gx=free.gx; u.gy=free.gy; free.gx=tg.gx; free.gy=tg.gy;
@@ -567,9 +569,9 @@ this.confetti.emitParticleAt(L.W/2,L.oy+(team==='me'?0:L.gh),46);
  }
  startTurn(team){
   this.turnTeam=team; this.halfTurn++;
-  if(this.halfTurn===TPH+1){ this.half=2; this.bigText('ТАЙМ 2',0xffcf3f); SFX.whistle();
-    this.rubber=(this.scoreMe<this.scoreAi)?0.8:((this.scoreAi<this.scoreMe)?-0.8:0); }
-  this.units.forEach(u=>{ if(u.team===team){ u.acted=false; if(!u.injured){u.spr.setAlpha(1);u.mark.setText('');} this.drawRing(u);} });
+  if(this.halfTurn===TPH+1){ this.half=2; this.bigText('ТАЙМ 2',0xffcf3f); SFX.whistle(); }
+  if(this.half===2) this.rubber=(this.scoreMe<this.scoreAi)?0.8:((this.scoreAi<this.scoreMe)?-0.8:0);   // P2-14: пересчёт каждый ход
+  this.units.forEach(u=>{ if(u.team===team){ u.acted=false; u.mSpent=0; if(!u.injured){u.spr.setAlpha(1);u.mark.setText('');} this.drawRing(u);} });
   Game.syncHud();
   if(team==='ai'){ this.phase='ai'; this.sel=null; this.clearHi(); Game.syncCard(null);
     UI.toast('🔴 Ход «Бульдогов»…','red');
@@ -589,7 +591,8 @@ this.confetti.emitParticleAt(L.W/2,L.oy+(team==='me'?0:L.gh),46);
   this.startTurn(this.turnTeam==='me'?'ai':'me');
  }
  turnover(reason){
-  this.turnsLost++; VKB.track('turnover',1);
+  if(this.turnTeam==='me')this.turnsLost++;   // P2-11: в статистику — только свои потери
+  VKB.track('turnover',1);
   UI.toast('⚠️ '+reason+' Смена хода.','red'); SFX.fail();
   this.sel=null; this.clearHi(); Game.syncCard(null);
   this.phase='anim';
@@ -718,9 +721,9 @@ this.confetti.emitParticleAt(L.W/2,L.oy+(team==='me'?0:L.gh),46);
             SFX.tackle(); this.cameras.main.shake(120,.007);
             this.tweens.add({targets:u.spr,x:this.cx(c.gx)+(this.cx(u.gx)-this.cx(c.gx))*.55,
               y:this.cy(c.gy)+(this.cy(u.gy)-this.cy(u.gy))*.55,duration:130,yoyo:true});
-            if(ok){ this.giveBall(u); UI.toast('🔴 '+u.name+' отобрал мяч!','red'); this.time.delayedCall(420,next); }
+                        if(ok){ this.giveBall(u); UI.toast('🔴 '+u.name+' отобрал мяч!','red'); this.time.delayedCall(420,next); }
             else { if(info.fumble){this.injure(u);UI.toast('💀 '+u.name+' травмирован','gold');}
-              this.time.delayedCall(420,next); }
+              this.turnover('Отбор «Бульдогов» сорвался!'); }
           });
         });
         return;
@@ -759,10 +762,9 @@ this.confetti.emitParticleAt(L.W/2,L.oy+(team==='me'?0:L.gh),46);
     if(!ok){UI.toast('Ролик не досмотрен','red');return;}
     this.docUsed=true; SFX.heal();
     let n=0;
-    this.units.forEach(u=>{ if(u.injured){u.injured=false;u.spr.setAlpha(1);u.mark.setText('');n++;this.drawRing(u);
-      this.dust.emitParticleAt(u.spr.x,u.spr.y,10);} });
-    this.units.forEach(u=>{ if(u.team==='me'){u.acted=false;u.spr.setAlpha(1);u.mark.setText('');} });
-    UI.toast('🩺 Доктор! '+(n?'Восстановлено: '+n+'. ':'')+'Все готовы к игре',true);
+    this.units.forEach(u=>{ if(u.injured){u.injured=false;u.acted=false;u.mSpent=0;u.spr.setAlpha(1);u.mark.setText('');n++;this.drawRing(u);
+      this.dust.emitParticleAt(u.spr.x,u.spr.y,10);} });          // P2-13: действие возвращаем только вылеченным
+    UI.toast('🩺 Доктор! '+(n?'Вылечено: '+n+'. В строй!':'Лазарет и так пуст'),true);
     this.cameras.main.flash(160,150,255,190);
     VKB.track('ad_reward_doc',1); Game.syncHud();
   });
