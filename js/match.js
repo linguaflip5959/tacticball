@@ -381,8 +381,8 @@ highlightTargets(){
   const t2=4+d*.7-u.st.pas*.6+this.pressure(u)*.9 - (this.rubber||0)*(u.team==='me'?1:-1);
   return {t:clamp(Math.round(t2*2)/2,3,12),d};
  }
- tackTarget(u,c){
-  const t2=5+c.st.tkl*.5-u.st.tkl*.7 - (this.rubber||0)*(u.team==='me'?1:-1);
+  tackTarget(u,c){
+  const t2=6.5+c.st.tkl*.5-u.st.tkl*.7 - (this.rubber||0)*(u.team==='me'?1:-1);   // P2b: база 5→6.5
   return {t:clamp(Math.round(t2*2)/2,3,12)};
  }
  pressure(u){ let n=0; for(const e of this.units){ if(e.team!==u.team&&!e.injured&&Math.abs(e.gx-u.gx)<=1&&Math.abs(e.gy-u.gy)<=1)n++; } return n; }

@@ -18,12 +18,23 @@ export const Game={
   };
   if(document.fonts&&document.fonts.ready) document.fonts.ready.then(start).catch(start); else start();
  },
- afterBoot(){
+  afterBoot(){
   this.menuStats(); this.squad();
   VKB.init(); VKB.user().then(u=>{ if(u)$('m-user').textContent='Тренер '+u.first_name+', «Барсуки» ждут свистка!'; });
   Save.cloud().then(()=>{ this.menuStats(); this.squad(); });
   SFX.on=Save.d.sound; $('btn-sound').textContent=Save.d.sound?'🔊':'🔇';
   document.querySelectorAll('.diff').forEach(d=>d.classList.toggle('on',+d.dataset.d===Save.d.diff));
+  // QA: отладочная консоль — включается ТОЛЬКО параметром ?debug в адресе
+  if(new URLSearchParams(location.search).has('debug')){
+    const sc=this.sc;
+    window.TB={
+      hurt(i=0){ const mine=sc.units.filter(u=>u.team==='me'); const u=mine[i]||mine[0];
+        if(u){ sc.injure(u); return '🩹 травмирован: '+u.name; } return 'матч не начат'; },
+      info(){ return { phase:sc.phase, turn:sc.turnTeam, score:sc.scoreMe+':'+sc.scoreAi,
+        ball:sc.ball?{ gx:sc.ball.gx, gy:sc.ball.gy,
+          holder:sc.ball.holder&&sc.ball.holder.name, onGround:sc.ball.onGround }:null }; },
+      sc };
+  }
  },
  ad(slot){ return VKB.rewarded(slot); },
  menuStats(){
