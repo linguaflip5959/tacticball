@@ -8,15 +8,27 @@ import {UI} from './ui.js';
 import {SFX} from './sfx.js';
 
 export const Game={
- boot(scenes){
+  boot(scenes){
   Save.load();
   const start=()=>{
+   if(this.ph)return;                                   // защита от двойного запуска
+   console.log('[ТБ] start: создаём Phaser');
    this.ph=new Phaser.Game({type:Phaser.AUTO,parent:'game',backgroundColor:'#06120e',
      scale:{mode:Phaser.Scale.RESIZE,width:'100%',height:'100%',autoCenter:Phaser.Scale.CENTER_BOTH},
      scene:scenes});
-   this.ph.events.on('ready',()=>{ this.sc=this.ph.scene.getScene('match'); this.wire(); this.afterBoot(); });
+   this.ph.events.on('ready',()=>this.onReady());
+   setTimeout(()=>this.onReady(),1500);                 // если 'ready' уже отстрелил — догоняем
   };
-  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(start).catch(start); else start();
+  if(document.fonts&&document.fonts.ready){
+   const t=setTimeout(start,2500);                      // если fonts.ready завис в iframe
+   document.fonts.ready.then(()=>{clearTimeout(t);start();}).catch(()=>{clearTimeout(t);start();});
+  } else start();
+ },
+ onReady(){
+  if(this._wired)return; this._wired=true;
+  console.log('[ТБ] onReady: игра готова, кнопки подключены');
+  this.sc=this.ph.scene.getScene('match');
+  this.wire(); this.afterBoot(); this.syncHud();
  },
   afterBoot(){
   this.menuStats(); this.squad();
