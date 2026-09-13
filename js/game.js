@@ -107,12 +107,14 @@ export const Game={
  },
  wire(){
   const sc=this.sc;
+  let rulesFrom='menu';                                   // P3-19: помним, откуда открыли правила
   const go=id=>{SFX.init();SFX.resume();SFX.ui();UI.show(id);};
   $('btn-play').onclick=()=>{ UI.hide(); sc.startMatch(); };
   $('btn-squad').onclick=()=>{ this.squad(); go('sc-squad'); };
   $('btn-squad-close').onclick=()=>{ this.menuStats(); go('sc-menu'); };
-  $('btn-howto').onclick=()=>go('sc-howto');
-  $('btn-howto-close').onclick=()=>{ Save.d.tutorial=true;Save.write(); UI.hide(); };
+  $('btn-howto').onclick=()=>{ rulesFrom='menu'; go('sc-howto'); };
+  $('btn-howto-close').onclick=()=>{ Save.d.tutorial=true;Save.write();
+    go(rulesFrom==='pause'?'sc-pause':'sc-menu'); };      // P3-19: возврат по месту открытия
   document.querySelectorAll('.diff').forEach(d=>d.onclick=()=>{
     Save.d.diff=+d.dataset.d; Save.write(); SFX.init();SFX.ui();
     document.querySelectorAll('.diff').forEach(x=>x.classList.toggle('on',x===d));
@@ -120,9 +122,11 @@ export const Game={
   });
   $('btn-pause').onclick=()=>{ if(sc.phase==='menu'||sc.phase==='over')return; SFX.ui(); sc.scene.pause(); this.syncHud(); go('sc-pause'); };
   $('btn-resume').onclick=()=>{ SFX.ui(); UI.hide(); sc.scene.resume(); };
-  $('btn-pause-rules').onclick=()=>go('sc-howto');
+  $('btn-pause-rules').onclick=()=>{ rulesFrom='pause'; go('sc-howto'); };
   $('btn-pause-doc').onclick=()=>{ SFX.ui(); UI.hide(); sc.scene.resume(); sc.doctor(); };
-  $('btn-quit').onclick=()=>{ sc.phase='over'; sc.scene.resume(); sc.scene.restart(); UI.show('sc-menu'); this.menuStats(); };
+  $('btn-quit').onclick=()=>{ sc.phase='over';
+    Save.d.matches++; Save.d.losses++; Save.d.streak=0; Save.write();   // P3-18: техническое поражение — как на кнопке написано
+    sc.scene.resume(); sc.scene.restart(); UI.show('sc-menu'); this.menuStats(); };
   $('btn-sound').onclick=()=>{ Save.d.sound=!Save.d.sound; SFX.on=Save.d.sound; Save.write();
     $('btn-sound').textContent=Save.d.sound?'🔊':'🔇'; if(Save.d.sound){SFX.init();SFX.ui();} };
   $('h-reroll').onclick=()=>{ if(!sc||sc.rerollFree>0||sc.rerollAd>=2)return;
@@ -145,7 +149,7 @@ export const Game={
     UI.toast('📤 Спасибо за репост! +100 🪙',true); VKB.track('share',1); }); };
   document.addEventListener('touchmove',e=>{ if(!e.target.closest('.gdd,.sq'))e.preventDefault(); },{passive:false});
   window.addEventListener('contextmenu',e=>e.preventDefault());
-  // первый запуск — правила
+  // первый запуск — правила (закрытие вернёт в меню, а не в пустоту)
   if(!Save.d.tutorial) setTimeout(()=>UI.show('sc-howto'),400);
  }
 };

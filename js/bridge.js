@@ -27,7 +27,7 @@ export const VKB=(function(){
     }).catch(()=>null); },
   storageSet(k,v){ safe('VKWebAppStorageSet',{key:k,value:v}); },
   share(){ return send('VKWebAppShare',{link:location.href}).then(()=>true).catch(()=>false); },
-  track(e,v){ safe('VKWebAppTrackEvent',{event_type:e,conversion_value:v||1,event_type_value:v||1}); },
+  track(e,v){ safe('VKWebAppTrackEvent',{event_name:e,conversion_value:v||1}); },          // P3-20
   rewarded(slot){
    window.__ad&&window.__ad('show',slot);
    if(!bridge) return mockAd(slot).then(ok=>{window.__ad&&window.__ad(ok?'reward':'fail',slot);return ok;});
@@ -38,9 +38,9 @@ export const VKB=(function(){
     function h(e){ const d=e&&e.detail; if(!d)return; const t=d.type;
       if(t==='VKWebAppRewardedVideoResult')finish(true);
       else if(t==='VKWebAppRewardedVideoFailed')finish(false);
-      else if(t==='VKWebAppRewardedVideoDidClose')setTimeout(()=>finish(true),120); }
+      else if(t==='VKWebAppRewardedVideoDidClose')setTimeout(()=>finish(false),120); }   // P3-17: закрыл = не заработал
     try{bridge.subscribe(h);}catch(e){}
-    timer=setTimeout(()=>finish(true),75000);
+    timer=setTimeout(()=>finish(false),75000);                                           // P3-17: и таймаут без награды
     send('VKWebAppShowRewardedVideo').catch(()=>finish(false));
    });
   }
