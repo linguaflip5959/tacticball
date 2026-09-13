@@ -316,7 +316,7 @@ export class MatchScene extends Phaser.Scene{
   const p=$('rr'); $('rr-n').textContent=this.rerollFree;
   $('rr-free').style.display=this.rerollFree>0?'flex':'none';
   $('rr-free').disabled=this.rerollFree<=0;
-  $('rr-ad').style.display=this.rerollAd<2?'flex':'none';
+  $('rr-ad').style.display=(this.rerollAd<2&&Game.adsReady)?'flex':'none';   // VK: кнопка — только при готовой рекламе
   $('rr-info').innerHTML=cfg.label+' — провал. <b>Потеря хода!</b><br>Перебросить кубики?';
   p.classList.add('on');
   const close=()=>{ p.classList.remove('on'); $('rr-free').onclick=null; $('rr-ad').onclick=null; $('rr-accept').onclick=null; };
@@ -607,7 +607,7 @@ highlightTargets(){
   $('r-goals').textContent=me; $('r-turns').textContent=this.turnsLost;
   $('r-diff').textContent=D.n; $('r-coins').textContent='+'+coins;
   $('r-rec').style.display=(win&&Save.d.streak>=3)?'block':'none';
-  $('btn-x2').style.display=this.x2Used?'none':'flex'; $('btn-x2').disabled=coins<=0;
+  $('btn-x2').style.display=(this.x2Used||!Game.adsReady)?'none':'flex'; $('btn-x2').disabled=coins<=0;
   $('btn-share').style.display=this.shared?'none':'flex';
   VKB.track('match_end',me*10+ai);
   UI.show('sc-result');
@@ -663,7 +663,7 @@ highlightTargets(){
     // пас лучшему партнёру
     const mates=this.units.filter(x=>x.team==='ai'&&!x.injured&&x!==u&&dist(u.gx,u.gy,x.gx,x.gy)<=this.passRange(u));
     const best=mates.map(m=>({m,pt:this.passTarget(u,m),score:0}))
-      .map(o=>{ o.score=(ROWS-o.m.gy)*0.6 - o.pt.t*1.2 - this.pressure(o.m)*1.5; return o; })
+       .map(o=>{ o.score=o.m.gy*0.6 - o.pt.t*1.2 - this.pressure(o.m)*1.5; return o; })   // ИИ-ФИКС: пас ВПЕРЁД
       .sort((a,b)=>b.score-a.score)[0];
     if(best&&best.pt.t<=8&&(press>0||dGoal>4.5)&&Math.random()<.8){
       this.aiRoll('📤 ПАС · '+u.name+' → '+best.m.name,best.pt.t,0,(ok)=>{

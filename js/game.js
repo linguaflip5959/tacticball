@@ -24,11 +24,17 @@ export const Game={
    document.fonts.ready.then(()=>{clearTimeout(t);start();}).catch(()=>{clearTimeout(t);start();});
   } else start();
  },
- onReady(){
+  onReady(){
   if(this._wired)return; this._wired=true;
   console.log('[ТБ] onReady: игра готова, кнопки подключены');
   this.sc=this.ph.scene.getScene('match');
   this.wire(); this.afterBoot(); this.syncHud();
+  // VK-требование: рекламные кнопки — только при готовых материалах.
+  // Мост предзагружает ролики при старте; проверяем сразу и раз в минуту (совет из доков).
+  this.adsReady=false;
+  const warm=()=>VKB.checkAds().then(ok=>{ this.adsReady=ok; this.syncHud(); });
+  warm();
+  setInterval(warm,60000);
  },
    afterBoot(){
   this.menuStats(); this.squad();
@@ -55,8 +61,8 @@ export const Game={
   $('m-coins').textContent=UI.fmt(Save.d.coins);
   $('q-coins').textContent=UI.fmt(Save.d.coins);
  },
-  syncHud(){
-  const sc=this.sc; if(!sc||!sc.units)return;    // VK-FIX: сцена могла ещё не создать юнитов
+   syncHud(){
+  const sc=this.sc; if(!sc||!sc.units)return;
   $('s-me').textContent=sc.scoreMe||0; $('s-ai').textContent=sc.scoreAi||0;
   const ht=sc.halfTurn||0;
   const half=sc.half||1, turnNo=((ht-1)%TPH)+1;
@@ -67,7 +73,7 @@ export const Game={
   $('h-reroll').textContent='🎲 переброс: '+rf+(ra?'(+'+ra+' за рекламу)':'');
   $('h-reroll').classList.toggle('zero',rf<=0&&ra>=2);
   $('h-coins').textContent=UI.fmt(Save.d.coins);
-  $('btn-pause-doc').style.display=(sc.docUsed||sc.phase==='over')?'none':'flex';
+  $('btn-pause-doc').style.display=(sc.docUsed||sc.phase==='over'||!this.adsReady)?'none':'flex';
  },
   syncCard(u){
   const p=$('pcard');

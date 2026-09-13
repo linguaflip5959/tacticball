@@ -1,11 +1,7 @@
 /* =====================================================================
    bridge.js — обёртка VK Bridge + мок-реклама для локального QA
-   Сверено с dev.vk.com:
-   • глобал моста — window.vkBridge (старый window.vk.bridge — запасной)
-   • rewarded — VKWebAppShowNativeAds, ad_format:'reward'
-   • StorageGet отвечает полем keys (не objects!)
-   • TrackEvent — event_name + event_params
-   • SetViewSettings — только Android/iOS, text_color не существует
+   Сверено с dev.vk.com: vkBridge · ShowNativeAds+CheckNativeAds ·
+   StorageGet(keys) · TrackEvent(event_name)
    ===================================================================== */
 import {$} from './utils.js';
 
@@ -33,8 +29,13 @@ export const VKB=(function(){
      .catch(e=>console.warn('[ТБ] VKWebAppInit отклонён:',e));
    safe('VKWebAppSetViewSettings',{status_bar_style:'light',action_bar_color:'#06120e'}); },
   user(){ return send('VKWebAppGetUserInfo').then(d=>(d&&d.first_name)?d:null).catch(()=>null); },
+  checkAds(){                                   // VK-требование для rewarded
+   if(!bridge) return Promise.resolve(true);    // мок-режим: реклама «есть» всегда
+   return send('VKWebAppCheckNativeAds',{ad_format:'reward'})
+     .then(r=>{ const ok=!!(r&&r.result); console.log('[ТБ] checkAds →',ok); return ok; })
+     .catch(()=>false); },
   storageGet(k){ return send('VKWebAppStorageGet',{keys:[k]}).then(r=>{
-      try{ const it=(r&&r.keys)?r.keys[0]:null;                 // по докам: ответ — поле keys
+      try{ const it=(r&&r.keys)?r.keys[0]:null;
         return it?JSON.parse(it.value):null; }catch(e){ return null; }
     }).catch(()=>null); },
   storageSet(k,v){ safe('VKWebAppStorageSet',{key:k,value:v}); },
@@ -47,10 +48,10 @@ export const VKB=(function(){
     let done=false,t=null;
     const finish=ok=>{ if(done)return; done=true; clearTimeout(t);
       window.__ad&&window.__ad(ok?'reward':'fail',slot); resolve(ok); };
-    t=setTimeout(()=>finish(false),150000);                    // страховка от зависшего рекламного промиса
+    t=setTimeout(()=>finish(false),150000);
     send('VKWebAppShowNativeAds',{ad_format:'reward'})
       .then(r=>{ console.log('[ТБ] rewarded('+slot+') →',JSON.stringify(r));
-        finish(!(r&&r.result===false)); })                     // result:false = закрыл, иначе — награда
+        finish(!(r&&r.result===false)); })
       .catch(e=>{ console.warn('[ТБ] rewarded('+slot+') ошибка:',e); finish(false); });
    });
   }
