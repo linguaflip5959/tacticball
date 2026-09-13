@@ -1,0 +1,8 @@
+# ОС-мусор
+.DS_Store
+Thumbs.db
+desktop.ini
+# Редактор
+.vscode/
+# Логи
+*.log
