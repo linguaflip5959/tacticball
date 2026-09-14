@@ -211,8 +211,8 @@ export class MatchScene extends Phaser.Scene{
  clearHi(){ this.cells.clear(); }
 
  /* ---------- движение (дейкстра) ---------- */
- moveMap(u){
-  const L=this.L,budget=Math.max(0,u.st.spd-(u.mSpent||0)), start={gx:u.gx,gy:u.gy};   // P2-10: СКР = бюджет на ход
+  moveMap(u){
+  const L=this.L,budget=Math.max(0,u.st.spd-(u.mSpent||0)), start={gx:u.gx,gy:u.gy};
   const cost=new Map([[key(start.gx,start.gy),0]]);
   const prev=new Map(); const pq=[{gx:start.gx,gy:start.gy,c:0}];
   const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
@@ -223,11 +223,8 @@ export class MatchScene extends Phaser.Scene{
       const nx=cur.gx+d[0],ny=cur.gy+d[1];
       if(nx<0||ny<0||nx>=COLS||ny>=ROWS)continue;
       const occ=this.anyAt(nx,ny); if(occ&&occ!==u)continue;
-      let step=1;
-      // зона прессинга: клетка рядом с соперником дороже
-      for(const e of this.units){ if(e.team===u.team||e.injured)continue;
-        if(Math.abs(e.gx-nx)<=1&&Math.abs(e.gy-ny)<=1&&!(e.gx===nx&&e.gy===ny)){ step+=1; break; } }
-      const nc=cur.c+step; if(nc>budget)continue;
+      const nc=cur.c+1;                                    // И3: прессинг не тормозит движение
+      if(nc>budget)continue;
       const k=key(nx,ny);
       if(nc<(cost.get(k)??1e9)){ cost.set(k,nc); prev.set(k,{gx:cur.gx,gy:cur.gy}); pq.push({gx:nx,gy:ny,c:nc}); }
     }
@@ -237,7 +234,7 @@ export class MatchScene extends Phaser.Scene{
   cost.forEach((c,k)=>{ // восстанавливаем путь
     const path=[]; let cur=k;
     while(cur){ const p=cur.split(','); path.unshift({gx:+p[0],gy:+p[1]}); const pr=prev.get(cur); cur=pr?key(pr.gx,pr.gy):null; }
-    path.shift();                                  // P1-6: сносим стартовую клетку — не было «шага на месте»
+    path.shift();                                  // P1-6: стартовая клетка — с пути
     out.set(k,{cost:c,path});
   });
   return out;
@@ -376,13 +373,13 @@ highlightTargets(){
   if(this.rubber) t-= this.rubber*(u.team==='me'?1:-1);
   return {t:clamp(Math.round(t*2)/2,3,12),d};
  }
- passTarget(u,t){
+  passTarget(u,t){
   const d=dist(u.gx,u.gy,t.gx,t.gy);
-    const t2=4.5+d*.7-u.st.pas*.6+this.pressure(u)*.9 - (this.rubber||0)*(u.team==='me'?1:-1);   // И3: было 4
+  const t2=4.5+d*.7-u.st.pas*.6+this.pressure(u)*.9 - (this.rubber||0)*(u.team==='me'?1:-1);   // И3: было 4
   return {t:clamp(Math.round(t2*2)/2,3,12),d};
  }
   tackTarget(u,c){
-    const t2=7.5+c.st.tkl*.5-u.st.tkl*.7 - (this.rubber||0)*(u.team==='me'?1:-1);   // И3: было 6.5   // P2b: база 5→6.5
+  const t2=7.5+c.st.tkl*.5-u.st.tkl*.7 - (this.rubber||0)*(u.team==='me'?1:-1);   // И3: было 6.5
   return {t:clamp(Math.round(t2*2)/2,3,12)};
  }
  pressure(u){ let n=0; for(const e of this.units){ if(e.team!==u.team&&!e.injured&&Math.abs(e.gx-u.gx)<=1&&Math.abs(e.gy-u.gy)<=1)n++; } return n; }

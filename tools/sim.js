@@ -15,13 +15,14 @@ const CFG={
 
 const COLS=9, ROWS=12; let TPH=4;
 
+
 const DIFFS=[
   {n:'ДВОР',mul:1.0,gk:-0.9,aiReroll:0,boost:-1},
   {n:'ЛИГА',mul:1.6,gk:0.0, aiReroll:1,boost:0},
   {n:'ПРО', mul:2.4,gk:1.0, aiReroll:2,boost:1},
 ];
 const BASE=[[3,3,2,4],[4,3,3,3],[3,4,3,3],[4,3,4,2],[5,2,5,2]]; // [СКР,ПАС,УДР,ОТБ]
-const FORM=[[4,1],[2,3],[6,3],[3,4],[5,4]];
+const FORM=[[4,1],[2,3],[6,3],[3,5],[5,5]];
 
 const F={ // формулы post-Э3 — ручки «следующих рычагов»
   passBase:4, passDist:0.7, passStat:0.6, passPress:0.9,
