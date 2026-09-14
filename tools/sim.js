@@ -9,7 +9,8 @@
 
 const CFG={
   N:parseInt(process.argv[2]||'10000',10),
-  AI_ACT_AFTER_MOVE:true,   // теперь это поведение игры (Патч Б)
+  AI_ACT_AFTER_MOVE:true,
+  PASS_PRESS_MIN:1,   // носитель пасует только при давлении ≥ N врагов
 };
 
 const COLS=9, ROWS=12, TPH=4;
@@ -25,8 +26,12 @@ const F={ // формулы post-Э3 — ручки «следующих рыч�
   passBase:4, passDist:0.7, passStat:0.6, passPress:0.9,
   shotBase:5, shotDist:0.85, shotStat:0.75, shotAngle:0.55, shotPress:0.9,
   tackBase:6.5, tackHold:0.5, tackOwn:0.7,
-  shotZone:5.2, passRangeK:2, passRangeM:0.6, rubber:0.8,
+  shotZone:5.2, passRangeK:2, passRangeM:0.6, rubber:0.8, pressCost:1,
 };
+// переопределения из CLI: node tools/sim.js 10000 tackBase=7.5 pressCost=0
+process.argv.slice(3).forEach(s=>{ const p=s.split('=');
+  if(p[1]!==undefined){ if(p[0] in F) F[p[0]]=parseFloat(p[1]);
+    else if(p[0] in CFG) CFG[p[0]]=parseFloat(p[1]); } });
 
 const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
@@ -130,7 +135,7 @@ function moveMap(S,u){
       let step=1;
       for(const e of S.units){
         if(e.team===u.team||e.injured)continue;
-        if(Math.abs(e.gx-nx)<=1&&Math.abs(e.gy-ny)<=1&&!(e.gx===nx&&e.gy===ny)){step=2;break;}
+        if(Math.abs(e.gx-nx)<=1&&Math.abs(e.gy-ny)<=1&&!(e.gx===nx&&e.gy===ny)){step+=F.pressCost;break;}
       }
       const nc=cur.c+step;
       if(nc>budget)continue;
@@ -205,7 +210,7 @@ function tryAct(S,u){ // удар/пас, если условия — возвр
     const b=bestPass(S,u);
     const press=adjEnemies(S,u.team,u.gx,u.gy);
     const dGoal=dist(u.gx,u.gy,4,goalY(u.team));
-    if(b&&b.pt<=8&&press>0&&Math.random()<0.8)return doPass(S,u,b.m);   // «бегун»
+    if(b&&b.pt<=8&&press>=CFG.PASS_PRESS_MIN&&Math.random()<0.8)return doPass(S,u,b.m);
   }
   return null;
 }
