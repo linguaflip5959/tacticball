@@ -665,7 +665,7 @@ highlightTargets(){
     const best=mates.map(m=>({m,pt:this.passTarget(u,m),score:0}))
        .map(o=>{ o.score=o.m.gy*0.6 - o.pt.t*1.2 - this.pressure(o.m)*1.5; return o; })   // ИИ-ФИКС: пас ВПЕРЁД
       .sort((a,b)=>b.score-a.score)[0];
-    if(best&&best.pt.t<=8&&(press>0||dGoal>4.5)&&Math.random()<.8){
+    if(best&&best.pt.t<=8&&press>0&&Math.random()<.8){   // ИИ-ФИКС: без прессинга носитель БЕЖИТ
       this.aiRoll('📤 ПАС · '+u.name+' → '+best.m.name,best.pt.t,0,(ok)=>{
         u.acted=true; this.markActed(u);
         this.animateBall(u.gx,u.gy,best.m.gx,best.m.gy,ok,()=>{
@@ -700,6 +700,36 @@ highlightTargets(){
   }
   if(!target||!target.path||!target.path.length){ u.acted=true; this.markActed(u); this.time.delayedCall(220,next); return; }
   this.walk(u,target.path,()=>{
+        // ИИ-ФИКС: «сдвинуться и сыграть» — как человек. Сначала удар, потом пас.
+    if(u.hasBall&&!u.injured&&this.canShoot(u)){
+      const st2=this.shootTarget(u);
+      if(st2.t<=7.5&&Math.random()<.85){
+        this.aiRoll('🥅 УДАР · '+u.name,st2.t,0,(ok,info)=>{
+          this.animateBall(u.gx,u.gy,(COLS-1)/2+rnd(-1,1),ROWS,ok,()=>{
+            if(ok||info.crit){ this.scoreGoal('ai',u); }
+            else { this.dropBall(clamp(u.gx,0,COLS-1),ROWS-2); UI.toast('🧤 Твой вратарь тащит!','gold');
+              this.time.delayedCall(700,()=>{ if(this.phase!=='over')this.endTurn(); }); }
+          });
+        });
+        return;
+      }
+    }
+    if(u.hasBall&&!u.injured){
+      const mates=this.units.filter(x=>x.team==='ai'&&!x.injured&&x!==u&&dist(u.gx,u.gy,x.gx,x.gy)<=this.passRange(u));
+      let best2=null,bs=-1e9;
+      mates.forEach(m=>{ const pt=this.passTarget(u,m);
+        const sc=m.gy*.6-pt.t*1.2-this.pressure(m)*1.5;
+        if(sc>bs){bs=sc;best2={m,pt};} });
+      if(best2&&best2.pt.t<=8&&this.pressure(u)>0&&Math.random()<.8){
+        this.aiRoll('📤 ПАС · '+u.name+' → '+best2.m.name,best2.pt.t,0,(ok)=>{
+          this.animateBall(u.gx,u.gy,best2.m.gx,best2.m.gy,ok,()=>{
+            if(ok){ this.giveBall(best2.m); UI.toast('🔴 Пас «Бульдогов» точен','red'); this.time.delayedCall(420,next); }
+            else { this.fumbleAI(u,best2.m); }
+          });
+        });
+        return;
+      }
+    }
     u.acted=true; this.markActed(u);
     // отбор после движения
     if(!u.hasBall&&this.ball&&this.ball.holder&&this.ball.holder.team==='me'){

@@ -9,7 +9,7 @@
 
 const CFG={
   N:parseInt(process.argv[2]||'10000',10),
-  AI_ACT_AFTER_MOVE:false,  // false = ИИ как в игре; true = ИИ умеет ход+действие
+  AI_ACT_AFTER_MOVE:true,   // теперь это поведение игры (Патч Б)
 };
 
 const COLS=9, ROWS=12, TPH=4;
@@ -205,7 +205,7 @@ function tryAct(S,u){ // удар/пас, если условия — возвр
     const b=bestPass(S,u);
     const press=adjEnemies(S,u.team,u.gx,u.gy);
     const dGoal=dist(u.gx,u.gy,4,goalY(u.team));
-    if(b&&b.pt<=8&&(press>0||dGoal>4.5)&&Math.random()<0.8)return doPass(S,u,b.m);
+    if(b&&b.pt<=8&&press>0&&Math.random()<0.8)return doPass(S,u,b.m);   // «бегун»
   }
   return null;
 }
