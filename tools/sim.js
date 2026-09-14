@@ -13,7 +13,8 @@ const CFG={
   PASS_PRESS_MIN:1,   // носитель пасует только при давлении ≥ N врагов
 };
 
-const COLS=9, ROWS=12, TPH=4;
+const COLS=9, ROWS=12; let TPH=4;
+
 const DIFFS=[
   {n:'ДВОР',mul:1.0,gk:-0.9,aiReroll:0,boost:-1},
   {n:'ЛИГА',mul:1.6,gk:0.0, aiReroll:1,boost:0},
@@ -31,7 +32,7 @@ const F={ // формулы post-Э3 — ручки «следующих рыч�
 // переопределения из CLI: node tools/sim.js 10000 tackBase=7.5 pressCost=0
 process.argv.slice(3).forEach(s=>{ const p=s.split('=');
   if(p[1]!==undefined){ if(p[0] in F) F[p[0]]=parseFloat(p[1]);
-    else if(p[0] in CFG) CFG[p[0]]=parseFloat(p[1]); } });
+    else if(p[0]==='TPH') TPH=parseInt(p[1]); } });
 
 const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
@@ -104,7 +105,7 @@ function tackTarget(S,u,c){
 /* ---------- броски и перебросы ---------- */
 function rollOnce(target){ const a=d6(),b=d6();
   const fum=(a===1&&b===1), crit=(a===6&&b===6);
-  return {ok:crit?true:(fum?false:(a+b>=target)),fum}; }
+  return {ok:crit?true:(fum?false:(a+b>=target)),fum,sum:a+b}; }
 function roll(S,team,target){
   let r=rollOnce(target);
   while(!r.ok){
@@ -184,7 +185,7 @@ function doTackle(S,u,c){
   S.st.tackA++;S.st.rolls++;u.acted=true;
   const r=roll(S,u.team,tackTarget(S,u,c));
   if(r.ok){S.st.tackOK++;giveBall(S,u);return 'ok';}
-  if(r.fum)injure(S,u);                                           // 1-1 = травма отбирающего
+  if(r.sum<=3)injure(S,u);        // И3: неудачный отбор с суммой ≤3 — травма
   return 'turnover';
 }
 

@@ -378,11 +378,11 @@ highlightTargets(){
  }
  passTarget(u,t){
   const d=dist(u.gx,u.gy,t.gx,t.gy);
-  const t2=4+d*.7-u.st.pas*.6+this.pressure(u)*.9 - (this.rubber||0)*(u.team==='me'?1:-1);
+    const t2=4.5+d*.7-u.st.pas*.6+this.pressure(u)*.9 - (this.rubber||0)*(u.team==='me'?1:-1);   // И3: было 4
   return {t:clamp(Math.round(t2*2)/2,3,12),d};
  }
   tackTarget(u,c){
-  const t2=6.5+c.st.tkl*.5-u.st.tkl*.7 - (this.rubber||0)*(u.team==='me'?1:-1);   // P2b: база 5→6.5
+    const t2=7.5+c.st.tkl*.5-u.st.tkl*.7 - (this.rubber||0)*(u.team==='me'?1:-1);   // И3: было 6.5   // P2b: база 5→6.5
   return {t:clamp(Math.round(t2*2)/2,3,12)};
  }
  pressure(u){ let n=0; for(const e of this.units){ if(e.team!==u.team&&!e.injured&&Math.abs(e.gx-u.gx)<=1&&Math.abs(e.gy-u.gy)<=1)n++; } return n; }
@@ -482,7 +482,7 @@ highlightTargets(){
     if(ok){ this.giveBall(u); UI.toast('🛡️ Отбор! Мяч у «'+u.name+'»',true); VKB.track('tackle_win',1);
       this.afterAction(); }
     else {
-      if(info.fumble){ this.injure(u); UI.toast('💀 '+u.name+' получает травму!','red'); VKB.track('injury',1); }
+       if(info.v1+info.v2<=3){ this.injure(u); UI.toast('💀 '+u.name+' получает травму!','red'); VKB.track('injury',1); }
       this.turnover('Отбор не удался!');
     }
    }});
@@ -742,7 +742,7 @@ highlightTargets(){
             this.tweens.add({targets:u.spr,x:this.cx(c.gx)+(this.cx(u.gx)-this.cx(c.gx))*.55,
               y:this.cy(c.gy)+(this.cy(u.gy)-this.cy(u.gy))*.55,duration:130,yoyo:true});
                         if(ok){ this.giveBall(u); UI.toast('🔴 '+u.name+' отобрал мяч!','red'); this.time.delayedCall(420,next); }
-            else { if(info.fumble){this.injure(u);UI.toast('💀 '+u.name+' травмирован','gold');}
+            else { if(info.v1+info.v2<=3){this.injure(u);UI.toast('💀 '+u.name+' травмирован','gold');}
               this.turnover('Отбор «Бульдогов» сорвался!'); }
           });
         });

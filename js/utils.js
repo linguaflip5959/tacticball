@@ -2,7 +2,7 @@
    utils.js — константы игры + общие хелперы
    ===================================================================== */
 
-export const COLS=9, ROWS=12, TPH=4;        // сетка и ходов в тайме
+export const COLS=9, ROWS=12, TPH=6;   // БАЛАНС-И3: было 4
 export const DIFFS=[
  {n:'ДВОР', mul:1.0, gk:-0.9, aiReroll:0},
  {n:'ЛИГА', mul:1.6, gk:0,    aiReroll:1},
